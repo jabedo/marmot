@@ -1,10 +1,8 @@
 package com.peakc.marmot;
 
 import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
 import org.ini4j.Ini;
 import org.ini4j.InvalidFileFormatException;
-import org.ini4j.Profile;
 import org.marc4j.MarcPermissiveStreamReader;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcStreamWriter;
@@ -18,14 +16,14 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class Main {
-    private static Logger logger = Logger.getLogger(Cron.class);
+public class MergeUpdate {
+    private static Logger logger = Logger.getLogger(MergeUpdate.class);
     // write your code here
 
     public static void main(String[] args) {
 
         if (args.length == 0) {
-            System.out.println("The name the .ini configuration file must be provided as first parameter.");
+            System.out.println("The .ini configuration file must be provided as first parameter.");
             System.exit(1);
         }
 
@@ -36,31 +34,34 @@ public class Main {
         }
 
         /* code for logging
-        Date currentTime = new Date();
+
         File log4jFile = new File("../../sites/" + serverName + "/conf/log4j.cron.properties");
         if (log4jFile.exists()){
             PropertyConfigurator.configure(log4jFile.getAbsolutePath());
         }else{
             System.out.println("Could not find log4j configuration " + log4jFile.toString());
         }
-        logger.info(currentTime.toString() + ": Starting Cron");
+
 */
         Ini configIni = loadConfigFile(args[0]);
-
-        String exportPath = configIni.get("Reindex", "marcPath");
-        String backupPath = configIni.get("Reindex", "marcBackupPath");
-        String marcEncoding = configIni.get("Reindex", "marcEncoding");
-        String recordNumberTag = configIni.get("Reindex", "recordNumberTag");
-        String recordNumberPrefix = configIni.get("Reindex", "recordNumberPrefix");
-        File mainFile = null;
-
+        Date currentTime = new Date();
+        logger.info(currentTime.toString() + ": Starting Merge");
+        MergeMarcUpdatesAndDeletes merge = new MergeMarcUpdatesAndDeletes();
+        if (merge.startProcess(configIni, logger)) {
+            currentTime = new Date();
+            logger.info(currentTime.toString() + ": Successful Merge");
+        }
+        else {
+            currentTime = new Date();
+            logger.info(currentTime.toString() + ": Merge Failed");
+        }
 
     }
     private static Ini loadConfigFile(String filename){
         //First load the default config file
-        String configName = "../../sites/default/conf/" + filename;
+       /* String configName = "../../sites/default/conf/" + filename;*/
        /* logger.info("Loading configuration from " + configName);*/
-        File configFile = new File(configName);
+        File configFile = new File(filename);
         if (!configFile.exists()) {
            /* logger.error("Could not find configuration file " + configName);*/
             System.exit(1);
@@ -78,12 +79,14 @@ public class Main {
             /*logger.error("Configuration file could not be read.", e);*/
         }
 
+       /*
+
         //Now override with the site specific configuration
         String siteSpecificFilename = "../../sites/" + serverName + "/conf/" + filename;
-        /*logger.info("Loading site specific config from " + siteSpecificFilename);*/
+        *//*logger.info("Loading site specific config from " + siteSpecificFilename);*//*
         File siteSpecificFile = new File(siteSpecificFilename);
         if (!siteSpecificFile.exists()) {
-          /*  logger.error("Could not find server specific config file");*/
+          *//*  logger.error("Could not find server specific config file");*//*
             System.exit(1);
         }
         try {
@@ -97,17 +100,17 @@ public class Main {
                 }
             }
         } catch (InvalidFileFormatException e) {
-           /* logger.error("Site Specific config file is not valid.  Please check the syntax of the file.", e);*/
+           *//* logger.error("Site Specific config file is not valid.  Please check the syntax of the file.", e);*//*
         } catch (IOException e) {
             logger.error("Site Specific config file could not be read.", e);
         }
 
         //Now override with the site specific configuration
         String passwordFilename = "../../sites/" + serverName + "/conf/config.pwd.ini";
-        /*logger.info("Loading site specific config from " + siteSpecificFilename);*/
+        *//*logger.info("Loading site specific config from " + siteSpecificFilename);*//*
         File siteSpecificPasswordFile = new File(passwordFilename);
         if (!siteSpecificPasswordFile.exists()) {
-           /* logger.error("Could not find server specific config password file");*/
+           *//* logger.error("Could not find server specific config password file");*//*
             System.exit(1);
         }
         try {
@@ -121,10 +124,13 @@ public class Main {
                 }
             }
         } catch (InvalidFileFormatException e) {
-           /* logger.error("Site Specific config file is not valid.  Please check the syntax of the file.", e);*/
+           *//* logger.error("Site Specific config file is not valid.  Please check the syntax of the file.", e);*//*
         } catch (IOException e) {
-            /*logger.error("Site Specific config file could not be read.", e);*/
+            *//*logger.error("Site Specific config file could not be read.", e);*//*
         }
+
+        */
+
         return ini;
     }
 
@@ -133,7 +139,7 @@ public class Main {
         try {
 
 
-             String recordNumberTag            = "907";
+            String recordNumberTag            = "907";
             String recordNumberPrefix         = ".b";
 
             File mainFile = new File("C:\\Marmot\\flatirons_ebrary\\bpl\\marc\\bpl_ebrary_marcrecords_20160420.mrc");
@@ -177,30 +183,30 @@ public class Main {
 
 
 
-private static String getRecordIdFromMarcRecord(Record marcRecord, String recordNumberTag, String recordNumberPrefix ) {
+    private static String getRecordIdFromMarcRecord(Record marcRecord, String recordNumberTag, String recordNumberPrefix ) {
 
 
-    List<DataField> recordIdField = getDataFields(marcRecord,recordNumberTag);
-    //Make sure we only get one ils identifier
-    for (DataField curRecordField : recordIdField) {
-        Subfield subfieldA = curRecordField.getSubfield('a');
-        if (subfieldA != null && (recordNumberPrefix.length() == 0 || subfieldA.getData().length() > recordNumberPrefix.length())) {
-            if (curRecordField.getSubfield('a').getData().substring(0, recordNumberPrefix.length()).equals(recordNumberPrefix)) {
-                return curRecordField.getSubfield('a').getData();
+        List<DataField> recordIdField = getDataFields(marcRecord,recordNumberTag);
+        //Make sure we only get one ils identifier
+        for (DataField curRecordField : recordIdField) {
+            Subfield subfieldA = curRecordField.getSubfield('a');
+            if (subfieldA != null && (recordNumberPrefix.length() == 0 || subfieldA.getData().length() > recordNumberPrefix.length())) {
+                if (curRecordField.getSubfield('a').getData().substring(0, recordNumberPrefix.length()).equals(recordNumberPrefix)) {
+                    return curRecordField.getSubfield('a').getData();
+                }
             }
         }
+        return null;
     }
-    return null;
-}
 
-private static List<DataField> getDataFields(Record marcRecord, String tag) {
+    private static List<DataField> getDataFields(Record marcRecord, String tag) {
         List variableFields = marcRecord.getVariableFields(tag);
         List<DataField> variableFieldsReturn = new ArrayList<>();
         for (Object variableField : variableFields){
-        if (variableField instanceof DataField){
-        variableFieldsReturn.add((DataField)variableField);
-        }
+            if (variableField instanceof DataField){
+                variableFieldsReturn.add((DataField)variableField);
+            }
         }
         return variableFieldsReturn;
-        }
+    }
 }
